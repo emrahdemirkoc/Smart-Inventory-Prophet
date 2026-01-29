@@ -1,0 +1,358 @@
+{
+  "name": "Smart Inventory Prophet (v1.0)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d7d18d60-4411-4b91-82c0-91a374275a25",
+      "name": "Trigger: Daily Stock Scan (09:00)"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appWCc0vDam2L4zoo",
+          "mode": "list",
+          "cachedResultName": "Smart Inventory Prophet",
+          "cachedResultUrl": "https://airtable.com/appWCc0vDam2L4zoo"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblk5o5blPxznxhK3",
+          "mode": "list",
+          "cachedResultName": "Table 1",
+          "cachedResultUrl": "https://airtable.com/appWCc0vDam2L4zoo/tblk5o5blPxznxhK3"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "5746a524-3e4c-4ab9-9224-e8a1277ab84d",
+      "name": "Database: Fetch Logic Metrics",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "Ajay60jgP1cNazMj",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json['Durum Analizi'] }}",
+                    "rightValue": "ACİL",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "193f66bc-f2d8-4e8d-8dfe-86988c283395"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "d3a916e6-6184-45c6-b038-ed248f2c58ed",
+                    "leftValue": "={{ $json['Durum Analizi'] }}",
+                    "rightValue": "ÖLÜ",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "02ee1783-29f3-4673-9b20-8b9d15de6ddb",
+      "name": "Router: Decision Engine"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=GÖREV: Sen kıdemli bir Satın Alma Müdürüsün. Stoklarımız kritik seviyenin altına düştü. Tedarikçiye acil sipariş geçmek için profesyonel ama aciliyet belirten bir e-posta taslağı hazırla.\n\nÜRÜN BİLGİLERİ:\n- Ürün: {{ $json['Ürün Adı'] }}\n- Kalan Stok: {{ $json['Mevcut Stok'] }}\n- Satış Hızı: Ayda {{ $json['Aylık Satış Hızı'] }} adet.\n- Teslim Süresi: {{ $json['Tedarik Süresi (Gün)'] }} gün.\n\nİSTENEN MAİL İÇERİĞİ:\nKonu: ACİL SİPARİŞ: {{ $json['Ürün Adı'] }} - Stok Riski!\nMetin: \"Sayın Tedarikçi, bu ürün elimizde sadece X gün dayanacak kadar kaldı. Acilen 100 adet sipariş geçmek istiyoruz...\" minvalinde resmi bir dil kullan."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        624,
+        -96
+      ],
+      "id": "cc2cf351-3a78-41db-8c82-2f7a5f2ac5db",
+      "name": "Agent: Procurement Manager",
+      "credentials": {
+        "openAiApi": {
+          "id": "8G9HHRMyQLpATcg9",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#sales",
+          "mode": "name"
+        },
+        "text": "=🚨 *ACİL STOK UYARISI* Ürün: {{ $('Router: Decision Engine').item.json['Ürün Adı'] }} Durum: {{ $('Router: Decision Engine').item.json['Durum Analizi'] }} ({{ $('Router: Decision Engine').item.json['Kaç Günlük Stok Var?'] }} Gün Kaldı!)  🤖 *AI Önerisi:* Tedarikçiye şu maili atalım mı? -------------------------------------------------- {{ $json.output[0].content }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        976,
+        -96
+      ],
+      "id": "7b138796-2f06-4502-9eaa-a44350e1deca",
+      "name": "UI: Approval Request (Restock)",
+      "webhookId": "ff666c53-f2d7-49b2-9a06-8bf9c270bd4a",
+      "credentials": {
+        "slackApi": {
+          "id": "bd1KXGx2tyVXrMMl",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=GÖREV: Sen çılgın bir Pazarlama Uzmanısın. Depoda çürümeye yüz tutmuş \"Ölü Stok\" tespit edildi. Bunu eritmek için müşterilere atılacak cezbedici bir kampanya maili ve sloganı yaz.\n\nÜRÜN BİLGİLERİ:\n- Ürün: {{ $json['Ürün Adı'] }}\n- Mevcut Stok: {{ $json['Mevcut Stok'] }} adet.\n- Sezon: {{ $json['Sezonalite'] }}\n\nİSTENEN İÇERİK:\n1. Slogan: Kısa, vurucu ve esprili olsun. (Örn: \"Noel Baba Bile Bunu Giymez Ama İndirimi Kaçırmaz!\")\n2. Mail Metni: %20 indirim vurgusu yap, \"Stoklarla Sınırlı\" diyerek yapay kıtlık (FOMO) oluştur."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        624,
+        96
+      ],
+      "id": "cc38ca75-edd7-442d-8b9f-0991b76805c7",
+      "name": "Agent: Growth Marketer",
+      "credentials": {
+        "openAiApi": {
+          "id": "8G9HHRMyQLpATcg9",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#sales",
+          "mode": "name"
+        },
+        "text": "=🐢 *ÖLÜ STOK FIRSATI* Ürün: {{ $('Router: Decision Engine').item.json['Ürün Adı'] }} Stok:{{ $('Router: Decision Engine').item.json['Mevcut Stok'] }} Adet  💡 *AI Kampanya Fikri:* -------------------------------------------------- {{ $json.output[0].content }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        976,
+        96
+      ],
+      "id": "889fb64e-b301-4dcd-af5d-4a475234de64",
+      "name": "UI: Approval Request (Promo)",
+      "webhookId": "fecab17d-4982-431f-90e3-31a58d1348c2",
+      "credentials": {
+        "slackApi": {
+          "id": "bd1KXGx2tyVXrMMl",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "🟡 \"DATA   INGESTION LAYER\"",
+        "height": 80,
+        "width": 256
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        16,
+        176
+      ],
+      "id": "9cbeaf1f-3a39-4cd2-865e-40a98d515c01",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "🔵 \"INTELLIGENCE LAYER\"",
+        "height": 80
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        352,
+        176
+      ],
+      "id": "fe3490e6-fcd2-4c6f-acce-75bfd2ef4829",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "🟢 \"DECISION SUPPORT LAYER\"",
+        "height": 80,
+        "width": 272
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        16
+      ],
+      "id": "d11772c3-fea3-4fae-a858-96995d7f3eb6",
+      "name": "Sticky Note2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger: Daily Stock Scan (09:00)": {
+      "main": [
+        [
+          {
+            "node": "Database: Fetch Logic Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Database: Fetch Logic Metrics": {
+      "main": [
+        [
+          {
+            "node": "Router: Decision Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router: Decision Engine": {
+      "main": [
+        [
+          {
+            "node": "Agent: Procurement Manager",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agent: Growth Marketer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent: Procurement Manager": {
+      "main": [
+        [
+          {
+            "node": "UI: Approval Request (Restock)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent: Growth Marketer": {
+      "main": [
+        [
+          {
+            "node": "UI: Approval Request (Promo)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "16ca2732-e1ea-47ac-add7-1dd086dfc072",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a2e52c777bc2ceaba0402a3b3768c056f8e30c3434809d4df0853e039bf670b5"
+  },
+  "id": "W3_e_DcvbzoA6HImgvutQ",
+  "tags": []
+}
